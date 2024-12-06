@@ -3,7 +3,7 @@ import uuid
 import os
 
 # Define the path for the TOML file
-data_file = 'https://drive.google.com/file/d/1OqFBsakNkqY4JAi-KarLHIK3p-OA5BRN/view?usp=drive_link'
+data_file = 'images.toml'
 
 # Function to add image data to the TOML file
 def add_image_data(image_url, location):
