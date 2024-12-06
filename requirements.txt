@@ -4,3 +4,6 @@ ultralytics
 pillow 
 opencv-python-headless
 opencv-python
+geopy
+folium
+streamlit-folium
