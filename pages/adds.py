@@ -26,12 +26,15 @@ st.title("Treasure Hunt App")
 # Step 1: Collect user information
 st.header("Step 1: Enter Your Information")
 name = st.text_input("Name")
-phone_number = st.text_input("Phone Number", type="number")
+phone_number = st.text_input("Phone Number")
 
 if st.button("Submit Information"):
+    # Check if input is numeric and has the correct length
     if not name or not phone_number:
         st.error("Please enter both your name and phone number.")
-    elif len(str(phone_number)) != 11:
+    elif not phone_number.isdigit():
+        st.error("Phone number must only contain digits.")
+    elif len(phone_number) != 11:
         st.error("Phone number must be exactly 11 characters long.")
     else:
         # Save the user's information to a TOML file
