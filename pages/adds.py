@@ -1,6 +1,7 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
+from geopy.distance import geodesic
 
 # Predefined billboard locations
 billboard_locations = {
@@ -8,76 +9,90 @@ billboard_locations = {
     "Billboard 2": (35.7156, 51.4027),  # Example coordinates (Tehran)
 }
 
-# JavaScript to get user location
-def get_location_script():
-    return """
-    <script>
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const long = position.coords.longitude;
-                    const locationInput = document.getElementById("location");
-                    locationInput.value = `${lat},${long}`;
-                    locationInput.dispatchEvent(new Event('change'));
-                },
-                (error) => {
-                    if (error.code === error.PERMISSION_DENIED) {
-                        alert('Permission denied. Please allow location access in your browser settings.');
-                    } else {
-                        alert('Unable to retrieve location. Please try again.');
-                    }
+# Title
+st.title("Treasure Hunt App")
+
+# Header
+st.header("Step 1: Select Your Location")
+
+# Initialize map centered at a default location
+default_location = (35.6892, 51.3890)  # Tehran
+m = folium.Map(location=default_location, zoom_start=12)
+
+# Add billboard locations to the map
+for name, location in billboard_locations.items():
+    folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
+
+# Add an interactive marker for user to select location
+user_marker = folium.Marker(
+    location=default_location,
+    draggable=True,
+    popup="Drag me to your location!",
+    icon=folium.Icon(color="blue"),
+)
+user_marker.add_to(m)
+
+# Render the map in the Streamlit app
+map_data = st_folium(m, width=700, height=500)
+
+# Get user's geolocation using JavaScript for the browser's geolocation API
+st.markdown("""
+<script>
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            window.parent.postMessage({
+                'type': 'streamlit:set_component_value',
+                'id': 'user_location',
+                'value': {
+                    'latitude': position.coords.latitude,
+                    'longitude': position.coords.longitude
                 }
-            );
-        } else {
-            alert('Geolocation is not supported by your browser.');
-        }
+            }, '*');
+        }, function(error) {
+            window.parent.postMessage({
+                'type': 'streamlit:set_component_value',
+                'id': 'error_message',
+                'value': 'Unable to get your location. Please check your browser settings.'
+            }, '*');
+        });
+    } else {
+        window.parent.postMessage({
+            'type': 'streamlit:set_component_value',
+            'id': 'error_message',
+            'value': 'Geolocation is not supported by this browser.'
+        }, '*');
     }
-    </script>
-    """
+</script>
+""", unsafe_allow_html=True)
 
-# Add JavaScript for location retrieval
-st.markdown(get_location_script(), unsafe_allow_html=True)
+# Receive the user's location or error message
+user_location = st.session_state.get('user_location')
+error_message = st.session_state.get('error_message')
 
-# Hidden input to receive location
-location_input = st.text_input("Your Location", key="location", label_visibility="hidden")
+if error_message:
+    st.error(error_message)
+elif user_location:
+    latitude, longitude = user_location['latitude'], user_location['longitude']
+    st.success(f"Your current location: Latitude {latitude}, Longitude {longitude}")
 
-# Button to trigger location retrieval
-if st.button("Get My Location"):
-    st.markdown('<script>getLocation();</script>', unsafe_allow_html=True)
-
-# Check if location data is available
-if location_input:
-    latitude, longitude = map(float, location_input.split(","))
-    user_location = (latitude, longitude)
-    st.success(f"Your location: Latitude {latitude}, Longitude {longitude}")
-
-    # Display map with user's location
-    st.header("Your Location on the Map")
-    m = folium.Map(location=user_location, zoom_start=15)
-
-    # Add user location marker
-    folium.Marker(user_location, popup="You are here", icon=folium.Icon(color="blue")).add_to(m)
-
-    # Add billboard locations to the map
-    for name, location in billboard_locations.items():
-        folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
-
-    # Render the map
-    st_folium(m, width=700, height=500)
+    # Add user's location to the map
+    folium.Marker(
+        location=(latitude, longitude),
+        popup="Your location",
+        icon=folium.Icon(color="green"),
+    ).add_to(m)
 
     # Check proximity to billboards
-    st.header("Proximity Check")
+    st.header("Step 2: Check Proximity")
     found = False
     for name, location in billboard_locations.items():
-        distance = ((latitude - location[0]) ** 2 + (longitude - location[1]) ** 2) ** 0.5
-        if distance < 0.01:  # Example threshold for proximity
+        distance = geodesic((latitude, longitude), location).meters
+        if distance < 100:  # Example threshold for proximity (100 meters)
             found = True
             st.success(f"You are near {name}! Proceed to scan the billboard.")
             break
 
     if not found:
-        st.error("You are not near any billboard. Move closer.")
+        st.error("You are not near any billboard. Please move closer.")
 else:
-    st.info("Click 'Get My Location' to allow the app to retrieve your location.")
+    st.warning("Waiting to retrieve your location. Please ensure location services are enabled.")
