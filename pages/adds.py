@@ -7,6 +7,19 @@ import os
 # Define the file path for saving data
 data_file = 'user_data.toml'
 
+# Check if the file exists; if not, create it with an initial structure
+if not os.path.exists(data_file):
+    initial_data = {
+        "user": {
+            "name": "",
+            "phone_number": "",
+            "latitude": None,
+            "longitude": None
+        }
+    }
+    with open(data_file, 'w') as f:
+        toml.dump(initial_data, f)
+
 # Title
 st.title("Treasure Hunt App")
 
@@ -18,6 +31,8 @@ phone_number = st.text_input("Phone Number", type="number")
 if st.button("Submit Information"):
     if not name or not phone_number:
         st.error("Please enter both your name and phone number.")
+    elif len(str(phone_number)) != 11:
+        st.error("Phone number must be exactly 11 characters long.")
     else:
         # Save the user's information to a TOML file
         user_data = {
