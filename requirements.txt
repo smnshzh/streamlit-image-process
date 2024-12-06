@@ -8,3 +8,5 @@ geopy
 folium
 streamlit-folium
 leaflet
+toml
+uuid
