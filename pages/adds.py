@@ -8,40 +8,67 @@ billboard_locations = {
     "Billboard 2": (35.7156, 51.4027),  # Example coordinates (Tehran)
 }
 
-# Title
-st.title("Treasure Hunt App")
+# JavaScript to get user location
+def get_location_script():
+    return """
+    <script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const long = position.coords.longitude;
+                    const locationInput = document.getElementById("location");
+                    locationInput.value = `${lat},${long}`;
+                    locationInput.dispatchEvent(new Event('change'));
+                },
+                (error) => {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        alert('Permission denied. Please allow location access in your browser settings.');
+                    } else {
+                        alert('Unable to retrieve location. Please try again.');
+                    }
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser.');
+        }
+    }
+    </script>
+    """
 
-# Header
-st.header("Step 1: Select Your Location")
+# Add JavaScript for location retrieval
+st.markdown(get_location_script(), unsafe_allow_html=True)
 
-# Initialize map centered at a default location
-default_location = (35.6892, 51.3890)  # Tehran
-m = folium.Map(location=default_location, zoom_start=12)
+# Hidden input to receive location
+location_input = st.text_input("Your Location", key="location", label_visibility="hidden")
 
-# Add billboard locations to the map
-for name, location in billboard_locations.items():
-    folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
+# Button to trigger location retrieval
+if st.button("Get My Location"):
+    st.markdown('<script>getLocation();</script>', unsafe_allow_html=True)
 
-# Add an interactive marker for user to select location
-user_marker = folium.Marker(
-    location=default_location,
-    draggable=True,
-    popup="Drag me to your location!",
-    icon=folium.Icon(color="blue"),
-)
-user_marker.add_to(m)
+# Check if location data is available
+if location_input:
+    latitude, longitude = map(float, location_input.split(","))
+    user_location = (latitude, longitude)
+    st.success(f"Your location: Latitude {latitude}, Longitude {longitude}")
 
-# Render the map in the Streamlit app
-map_data = st_folium(m, width=700, height=500)
+    # Display map with user's location
+    st.header("Your Location on the Map")
+    m = folium.Map(location=user_location, zoom_start=15)
 
-# Check if user has selected a location
-if map_data and "last_clicked" in map_data:
-    user_location = map_data["last_clicked"]
-    latitude, longitude = user_location["lat"], user_location["lng"]
-    st.success(f"Your selected location: Latitude {latitude}, Longitude {longitude}")
+    # Add user location marker
+    folium.Marker(user_location, popup="You are here", icon=folium.Icon(color="blue")).add_to(m)
+
+    # Add billboard locations to the map
+    for name, location in billboard_locations.items():
+        folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
+
+    # Render the map
+    st_folium(m, width=700, height=500)
 
     # Check proximity to billboards
-    st.header("Step 2: Check Proximity")
+    st.header("Proximity Check")
     found = False
     for name, location in billboard_locations.items():
         distance = ((latitude - location[0]) ** 2 + (longitude - location[1]) ** 2) ** 0.5
@@ -51,6 +78,6 @@ if map_data and "last_clicked" in map_data:
             break
 
     if not found:
-        st.error("You are not near any billboard. Please move closer.")
+        st.error("You are not near any billboard. Move closer.")
 else:
-    st.warning("Drag the blue marker to your location and click on the map to confirm.")
+    st.info("Click 'Get My Location' to allow the app to retrieve your location.")
