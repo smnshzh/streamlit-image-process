@@ -1,5 +1,6 @@
 import toml
 import uuid
+import os
 
 # Define the path for the TOML file
 data_file = 'image_data.toml'
