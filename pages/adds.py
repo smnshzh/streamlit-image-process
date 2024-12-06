@@ -2,7 +2,6 @@ import streamlit as st
 from geopy.distance import geodesic
 import folium
 from streamlit_folium import st_folium
-import base64
 
 # Predefined billboard locations (latitude, longitude)
 billboard_locations = {
@@ -24,6 +23,9 @@ def get_js_for_gps():
             const lat = position.coords.latitude;
             const long = position.coords.longitude;
             document.getElementById("geo").value = `${lat},${long}`;
+        },
+        (error) => {
+            alert('Unable to access your location. Please enable location services and reload the page.');
         }
     );
     </script>
@@ -34,12 +36,16 @@ st.title("Treasure Hunt App")
 
 # Step 1: Get User Location Automatically
 st.header("Step 1: Automatic Location Detection")
-st.write("Allow your browser to access your location.")
+st.write("Allow your browser to access your location. If location services are disabled, enable them and reload the page.")
 
 js_code = get_js_for_gps()
 st.markdown(js_code, unsafe_allow_html=True)
 location_input = st.text_input("Your current location (auto-filled)", key="geo")
-if location_input:
+
+# Validate location input
+if not location_input:
+    st.error("Location not detected. Please enable location services and reload the page.")
+else:
     latitude, longitude = map(float, location_input.split(","))
     user_location = (latitude, longitude)
     st.success(f"Location detected: {user_location}")
@@ -84,6 +90,6 @@ if location_input:
 
 # Invitation to the event after completing all scans
 st.header("Final Step: Receive Your Invitation")
-if st.button("Complete the Treasure Hunt"):
+if location_input and st.button("Complete the Treasure Hunt"):
     st.balloons()
     st.success("Congratulations! You are invited to the grand event. Check your email for details.")
