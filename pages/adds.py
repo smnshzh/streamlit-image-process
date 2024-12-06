@@ -18,16 +18,22 @@ def is_near_location(user_location, target_location, radius=0.5):
 def get_js_for_gps():
     return """
     <script>
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const long = position.coords.longitude;
-            document.getElementById("geo").value = `${lat},${long}`;
-        },
-        (error) => {
-            alert('Unable to access your location. Please enable location services and reload the page.');
-        }
-    );
+    function getLocation() {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const long = position.coords.longitude;
+                const location = `${lat},${long}`;
+                const locationInput = document.getElementById("geo");
+                locationInput.value = location;
+                locationInput.dispatchEvent(new Event('change'));
+            },
+            (error) => {
+                alert('Unable to access your location. Please enable location services and reload the page.');
+            }
+        );
+    }
+    getLocation();
     </script>
     """
 
@@ -36,19 +42,32 @@ st.title("Treasure Hunt App")
 
 # Step 1: Get User Location Automatically
 st.header("Step 1: Automatic Location Detection")
-st.write("Allow your browser to access your location. If location services are disabled, enable them and reload the page.")
+st.write("The app is detecting your location. Please allow access to your location in the browser settings.")
 
 js_code = get_js_for_gps()
 st.markdown(js_code, unsafe_allow_html=True)
-location_input = st.text_input("Your current location (auto-filled)", key="geo")
 
-# Validate location input
-if not location_input:
-    st.error("Location not detected. Please enable location services and reload the page.")
-else:
+# Hidden text input to receive JavaScript's location data
+location_input = st.text_input("Hidden Location", key="geo", label_visibility="hidden")
+
+if location_input:
     latitude, longitude = map(float, location_input.split(","))
     user_location = (latitude, longitude)
     st.success(f"Location detected: {user_location}")
+
+    # Display the map with user's location
+    st.header("Your Location on the Map")
+    m = folium.Map(location=user_location, zoom_start=15)
+
+    # Add user location marker to the map
+    folium.Marker(user_location, popup="You are here", icon=folium.Icon(color="blue")).add_to(m)
+
+    # Add billboard locations to the map
+    for name, location in billboard_locations.items():
+        folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
+
+    # Render the map in the app
+    st_folium(m, width=700, height=500)
 
     # Step 2: Check Proximity to Billboards
     st.header("Step 2: Check Proximity")
@@ -74,22 +93,10 @@ else:
     if not found:
         st.error("You are not near any billboards. Move closer to continue.")
 
-    # Map Visualization
-    st.header("Map View")
-    map_center = user_location
-    m = folium.Map(location=map_center, zoom_start=15)
-
-    # Add user location to map
-    folium.Marker(user_location, popup="You are here", icon=folium.Icon(color="blue")).add_to(m)
-
-    # Add billboard locations to map
-    for name, location in billboard_locations.items():
-        folium.Marker(location, popup=name, icon=folium.Icon(color="red")).add_to(m)
-
-    st_folium(m, width=700, height=500)
-
-# Invitation to the event after completing all scans
-st.header("Final Step: Receive Your Invitation")
-if location_input and st.button("Complete the Treasure Hunt"):
-    st.balloons()
-    st.success("Congratulations! You are invited to the grand event. Check your email for details.")
+    # Invitation to the event after completing all scans
+    st.header("Final Step: Receive Your Invitation")
+    if st.button("Complete the Treasure Hunt"):
+        st.balloons()
+        st.success("Congratulations! You are invited to the grand event. Check your email for details.")
+else:
+    st.error("Location not detected. Please enable location services in your browser and reload the page.")
