@@ -2,6 +2,7 @@ import streamlit as st
 from geopy.distance import geodesic
 import folium
 from streamlit_folium import st_folium
+import base64
 
 # Predefined billboard locations (latitude, longitude)
 billboard_locations = {
@@ -14,42 +15,60 @@ def is_near_location(user_location, target_location, radius=0.5):
     distance = geodesic(user_location, target_location).km
     return distance <= radius
 
+# Function to load JavaScript for GPS
+def get_js_for_gps():
+    return """
+    <script>
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const long = position.coords.longitude;
+            document.getElementById("geo").value = `${lat},${long}`;
+        }
+    );
+    </script>
+    """
+
 # App Title
 st.title("Treasure Hunt App")
 
-# Step 1: Get User Location
-st.header("Step 1: Share Your Location")
+# Step 1: Get User Location Automatically
+st.header("Step 1: Automatic Location Detection")
+st.write("Allow your browser to access your location.")
 
-latitude = st.number_input("Enter your latitude", format="%.6f")
-longitude = st.number_input("Enter your longitude", format="%.6f")
-
-user_location = (latitude, longitude)
-
-if latitude and longitude:
-    st.write(f"Your location: {user_location}")
+js_code = get_js_for_gps()
+st.markdown(js_code, unsafe_allow_html=True)
+location_input = st.text_input("Your current location (auto-filled)", key="geo")
+if location_input:
+    latitude, longitude = map(float, location_input.split(","))
+    user_location = (latitude, longitude)
+    st.success(f"Location detected: {user_location}")
 
     # Step 2: Check Proximity to Billboards
-    st.header("Step 2: Find Nearby Billboards")
-
+    st.header("Step 2: Check Proximity")
     found = False
     for name, location in billboard_locations.items():
         if is_near_location(user_location, location):
             found = True
             st.success(f"You're near {name}! Proceed to scan the billboard.")
 
-            # Step 3: Simulate Scanning
+            # Step 3: Upload Image
             st.header("Step 3: Scan the Billboard")
             uploaded_file = st.file_uploader("Upload a photo of the billboard")
-
             if uploaded_file is not None:
                 st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
-                st.success("Billboard scanned successfully! Proceed to the next step.")
-                break
+
+                # Simulate Image Validation
+                if "valid_image_condition":  # Replace with actual image validation
+                    st.success(f"Billboard {name} scanned successfully! Proceed to the next task.")
+                else:
+                    st.error("The uploaded image is incorrect. Please try again.")
+            break
 
     if not found:
         st.error("You are not near any billboards. Move closer to continue.")
 
-    # Map visualization
+    # Map Visualization
     st.header("Map View")
     map_center = user_location
     m = folium.Map(location=map_center, zoom_start=15)
