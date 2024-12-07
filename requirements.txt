@@ -11,3 +11,4 @@ leaflet
 toml
 uuid
 BeautifulSoup
+urllib
