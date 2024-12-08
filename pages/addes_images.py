@@ -31,7 +31,10 @@ def extract_classes_ids_with_images(url, base_domain):
         for element in soup.find_all(id=True):
             img_tag = element.find("img")
             if img_tag and img_tag.get("src"):
-                img_url = urljoin(base_domain, img_tag["src"])
+                if img_tag.get("src").startswith("https"):
+                     img_url = img_tag["src"]
+                else    
+                    img_url = urljoin(base_domain, img_tag["src"])
                 element_id = element.get("id")
                 if element_id not in id_images:
                     id_images[element_id] = img_url
