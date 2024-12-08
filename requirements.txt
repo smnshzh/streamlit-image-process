@@ -10,5 +10,5 @@ streamlit-folium
 leaflet
 toml
 uuid
-BeautifulSoup
+beautifulsoup4
 urllib3
