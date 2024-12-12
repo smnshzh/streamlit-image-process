@@ -1,16 +1,24 @@
 import streamlit as st
+import requests
 
 # Title of the app
 st.title("Video Downloader and Player")
 
-# File uploader for video files
-uploaded_file = st.file_uploader("Upload a video file", type=["mp4", "avi", "mov"])
+# Input for the video URL
+video_url = st.text_input("Enter a video URL:")
 
-if uploaded_file is not None:
-    # Save the uploaded video to a temporary file
-    with open("uploaded_video.mp4", "wb") as f:
-        f.write(uploaded_file.getbuffer())
+if video_url:
+    try:
+        # Download the video
+        response = requests.get(video_url)
+        response.raise_for_status()  # Check for errors
 
-    # Display the uploaded video
-    st.subheader("Uploaded Video:")
-    st.video("uploaded_video.mp4")
+        # Save the video to a temporary file
+        with open("downloaded_video.mp4", "wb") as f:
+            f.write(response.content)
+
+        # Display the downloaded video
+        st.subheader("Downloaded Video:")
+        st.video("downloaded_video.mp4")
+    except requests.exceptions.RequestException as e:
+        st.error(f"An error occurred: {e}")
